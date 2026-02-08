@@ -84,47 +84,48 @@ pub fn sync(source: &Path, destination: &Path) -> io::Result<()> {
     for (path, src_meta) in &source_hash {
         match destination_hash.get(path) {
             None => {
+                let dst_path = destination.join(path);
+
                 if src_meta.is_dir {
-                    fs::create_dir_all(destination.join(path))?;
+                    fs::create_dir_all(&dst_path)?;
                     println!("CREATED DIR:  {:?}", path);
                 } else {
                     let src_file = source.join(path);
-                    let dst_file = destination.join(path);
 
-                    if let Some(parent) = dst_file.parent() {
+                    if let Some(parent) = dst_path.parent() {
                         fs::create_dir_all(parent)?;
                     }
 
-                    fs::copy(src_file, dst_file)?;
+                    fs::copy(src_file, &dst_path)?;
                     println!("COPIED FILE:  {:?}", path);
                 }
             }
             Some(dst_meta) => {
                 if src_meta.is_dir != dst_meta.is_dir {
-                    if src_meta.is_dir != dst_meta.is_dir {
-                        let dst_path = destination.join(path);
+                    let dst_path = destination.join(path);
 
-                        if dst_meta.is_dir {
-                            fs::remove_dir(&dst_path)?;
-                            println!("REPLACED DIR → FILE: {:?}", path);
-                        } else {
-                            fs::remove_file(&dst_path)?;
-                            println!("REPLACED FILE → DIR: {:?}", path);
-                        }
-
-                        if src_meta.is_dir {
-                            fs::create_dir_all(&dst_path)?;
-                        } else {
-                            let src_file = source.join(path);
-
-                            if let Some(parent) = dst_path.parent() {
-                                fs::create_dir_all(parent)?;
-                            }
-
-                            fs::copy(src_file, &dst_path)?;
-                        }
+                    if dst_meta.is_dir {
+                        fs::remove_dir_all(&dst_path)?;
+                        println!("REPLACED DIR → FILE: {:?}", path);
+                    } else {
+                        fs::remove_file(&dst_path)?;
+                        println!("REPLACED FILE → DIR: {:?}", path);
                     }
-                } else if src_meta.size != dst_meta.size || src_meta.modified != dst_meta.modified {
+
+                    if src_meta.is_dir {
+                        fs::create_dir_all(&dst_path)?;
+                    } else {
+                        let src_file = source.join(path);
+
+                        if let Some(parent) = dst_path.parent() {
+                            fs::create_dir_all(parent)?;
+                        }
+
+                        fs::copy(src_file, &dst_path)?;
+                    }
+                } else if !src_meta.is_dir
+                    && (src_meta.size != dst_meta.size || src_meta.modified != dst_meta.modified)
+                {
                     let src_file = source.join(path);
                     let dst_file = destination.join(path);
 
@@ -133,7 +134,7 @@ pub fn sync(source: &Path, destination: &Path) -> io::Result<()> {
                     }
 
                     fs::copy(src_file, dst_file)?;
-                    println!("COPIED FILE:  {:?}", path);
+                    println!("UPDATED FILE: {:?}", path);
                 }
             }
         }
@@ -159,6 +160,6 @@ pub fn sync(source: &Path, destination: &Path) -> io::Result<()> {
         println!("DELETED DIR:  {:?}", dir);
     }
 
-    println!(" Sync completed successfully");
+    println!("Sync completed successfully");
     Ok(())
 }
