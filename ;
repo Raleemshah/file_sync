@@ -1,0 +1,57 @@
+use std::collections::HashMap;
+use std::fs;
+use std::fs::DirEntry;
+use std::io;
+use std::os::unix::fs::MetadataExt;
+use std::path::Path;
+use std::result;
+use std::time::SystemTime;
+use std::{env, path::PathBuf, process};
+pub fn walk_dir(root: &Path, cb: &mut dyn FnMut(&DirEntry)) -> io::Result<()> {
+    for entry in fs::read_dir(root)? {
+        let entry = entry?;
+        let path = entry.path();
+
+        // ignore macOS junk
+        if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+            if name.starts_with("._") || name == ".DS_Store" {
+                continue;
+            }
+        }
+
+        if path.is_dir() {
+            walk_dir(&path, cb)?;
+        } else {
+            cb(&entry);
+        }
+    }
+    Ok(())
+}
+
+pub struct FileMeta {
+    pub is_dir: bool,
+    pub size: u64,
+    pub modified: SystemTime,
+}
+
+pub fn sync(source: &Path, destination: &Path) -> io::Result<()> {
+    let mut source_hash: HashMap<PathBuf, FileMeta> = HashMap::new();
+    let mut destination_vec: Vec<PathBuf> = Vec::new();
+    walk_dir(source, &mut |entry: &DirEntry| {
+        let relative_path = entry.path();
+        let meta = entry.metadata()?;
+        let filedata= FileMeta{
+            is_dir: meta.is_dir(),
+            size: meta.size(),
+            modified: meta.modified().unwrap();
+        }
+        source_hash.insert(relative_path, filedata);
+    });
+
+    walk_dir(destination, &mut |entry: &DirEntry| {
+        let e = entry.path();
+        destination_vec.push(e);
+    });
+
+    Ok(())
+}
