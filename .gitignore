@@ -1,1 +1,35 @@
-/target
+# ---- Rust / Cargo ----
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# ---- macOS junk ----
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# ---- Editor / IDE ----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.bak
+
+# ---- OS / temp files ----
+*.tmp
+*.log
+*.cache
+*.pid
+
+# ---- Binaries / artifacts ----
+*.exe
+*.out
+*.bin
+*.app
